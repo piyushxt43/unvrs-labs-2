@@ -1,0 +1,5 @@
+# Old heavy PNG frames
+frames/
+
+# Conversion script (not needed in repo)
+convert_to_webp.py

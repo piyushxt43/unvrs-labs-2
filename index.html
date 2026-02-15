@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UNVRS Labs</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body {
+      overflow: hidden;
+      height: 100%;
+      background: #000;
+      cursor: none;
+    }
+
+    canvas {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+    }
+
+    /* ── Loading screen ── */
+    #loader {
+      position: fixed; top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: #000;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      z-index: 100;
+      transition: opacity 0.8s ease;
+    }
+    #loader.hidden { opacity: 0; pointer-events: none; }
+
+    #loader-bar-container {
+      width: 240px; height: 2px;
+      background: rgba(255,255,255,0.08);
+      border-radius: 2px; overflow: hidden;
+    }
+    #loader-bar {
+      height: 100%; width: 0%;
+      background: #fff; border-radius: 2px;
+      transition: width 0.15s ease;
+    }
+    #loader-text {
+      color: rgba(255,255,255,0.4);
+      font-family: system-ui, -apple-system, sans-serif;
+      font-size: 12px; margin-bottom: 14px;
+      letter-spacing: 3px; text-transform: uppercase;
+    }
+
+    /* ── Custom cursor ── */
+    .cursor-dot {
+      position: fixed; width: 6px; height: 6px;
+      background: #fff; border-radius: 50%;
+      pointer-events: none; z-index: 200;
+      mix-blend-mode: difference;
+      transform: translate3d(-50%, -50%, 0);
+      will-change: transform, left, top;
+      transition: opacity 0.3s;
+    }
+    .cursor-ring {
+      position: fixed; width: 44px; height: 44px;
+      border: 1.5px solid rgba(255,255,255,0.6);
+      border-radius: 50%;
+      pointer-events: none; z-index: 200;
+      mix-blend-mode: difference;
+      will-change: transform, left, top;
+      transition: opacity 0.3s;
+    }
+    .cursor-dot.hidden, .cursor-ring.hidden { opacity: 0; }
+
+    /* ── Hide custom cursor on touch-only devices ── */
+    @media (pointer: coarse) {
+      .cursor-dot, .cursor-ring { display: none; }
+      html, body { cursor: auto; }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="loader">
+    <div id="loader-text">Loading</div>
+    <div id="loader-bar-container"><div id="loader-bar"></div></div>
+  </div>
+
+  <canvas id="canvas"></canvas>
+
+  <div class="cursor-dot" id="cursorDot"></div>
+  <div class="cursor-ring" id="cursorRing"></div>
+
+  <script>
+  /* ═══════════════════════════════════════════════════════════
+     CONFIGURATION
+  ═══════════════════════════════════════════════════════════ */
+  const TOTAL_FRAMES   = 600;
+  const SCROLL_SPEED   = 0.15;   // scroll → frame sensitivity
+  const LERP_SPEED     = 0.15;   // frame transition smoothness
+  const MAX_RIPPLES    = 15;
+  const RIPPLE_SPACING = 30;     // px between ripple spawns
+  const RIPPLE_LIFE    = 1.8;    // seconds
+
+  /* ═══════════════════════════════════════════════════════════
+     SHADER SOURCES
+  ═══════════════════════════════════════════════════════════ */
+  const VERT_SRC = `
+    attribute vec2 a_position;
+    attribute vec2 a_texCoord;
+    varying vec2 v_uv;
+    void main() {
+      gl_Position = vec4(a_position, 0.0, 1.0);
+      v_uv = a_texCoord;
+    }
+  `;
+
+  const FRAG_SRC = `
+    precision highp float;
+    varying vec2 v_uv;
+
+    uniform sampler2D u_texture;
+    uniform vec2  u_resolution;
+    uniform vec2  u_imageSize;
+    uniform vec2  u_mouse;
+    uniform vec2  u_mouseVel;
+    uniform float u_mouseSpeed;
+    uniform float u_time;
+    uniform int   u_rippleCount;
+    uniform vec4  u_ripples[${MAX_RIPPLES}];
+
+    /* simple hash for film grain */
+    float hash(vec2 p) {
+      return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+    }
+
+    void main() {
+      /* ── cover-fit UV mapping ── */
+      float s = max(u_resolution.x / u_imageSize.x, u_resolution.y / u_imageSize.y);
+      float dw = u_imageSize.x * s;
+      float dh = u_imageSize.y * s;
+      vec2 uvRange  = u_resolution.xy / vec2(dw, dh);
+      vec2 uvOffset = (1.0 - uvRange) * 0.5;
+
+      /* aspect-corrected helpers */
+      float aspect = u_resolution.x / u_resolution.y;
+      vec2  asp    = vec2(aspect, 1.0);
+
+      /* ── liquid lens distortion around cursor ── */
+      vec2 displacement = vec2(0.0);
+      float mouseDist = distance(v_uv * asp, u_mouse * asp);
+      float lensRadius = 0.18;
+
+      if (mouseDist < lensRadius && u_mouseSpeed > 0.001) {
+        float t = 1.0 - mouseDist / lensRadius;
+        t = t * t * (3.0 - 2.0 * t);  /* smoothstep shape */
+
+        /* push pixels in direction of movement */
+        float strength = min(u_mouseSpeed * 0.09, 0.045);
+        displacement += u_mouseVel / (u_mouseSpeed + 0.0001) * t * strength;
+
+        /* subtle swirl */
+        vec2 d = v_uv - u_mouse;
+        float ang = t * u_mouseSpeed * 0.4;
+        float ca = cos(ang), sa = sin(ang);
+        displacement += (vec2(d.x*ca - d.y*sa, d.x*sa + d.y*ca) - d) * 0.25;
+      }
+
+      /* ── ripple waves ── */
+      for (int i = 0; i < ${MAX_RIPPLES}; i++) {
+        if (i >= u_rippleCount) break;
+        vec2  rPos  = u_ripples[i].xy;
+        float rBorn = u_ripples[i].z;
+        float rStr  = u_ripples[i].w;
+        float age   = u_time - rBorn;
+        if (age > ${RIPPLE_LIFE.toFixed(1)}) continue;
+
+        float fade   = 1.0 - age / ${RIPPLE_LIFE.toFixed(1)};
+        fade *= fade;
+        float radius = age * 0.35;
+        float dist   = distance(v_uv * asp, rPos * asp);
+        float ring   = abs(dist - radius);
+        float width  = 0.06;
+
+        if (ring < width) {
+          float wave = cos(ring / width * 3.14159265) * 0.5 + 0.5;
+          vec2  dir  = normalize(v_uv - rPos + 0.0001);
+          displacement += dir * wave * fade * rStr * 0.012;
+        }
+      }
+
+      /* ── sample with chromatic aberration ── */
+      vec2 sampleUV = v_uv + displacement;
+      vec2 texBase  = uvOffset + sampleUV * uvRange;
+
+      float aberr    = length(displacement) * 7.0;
+      vec2  aberrDir = aberr > 0.0 ? normalize(displacement) : vec2(0.0);
+      float aberrOff = aberr * 0.004;
+
+      vec4 color;
+      color.r = texture2D(u_texture, uvOffset + (sampleUV + aberrDir * aberrOff) * uvRange).r;
+      color.g = texture2D(u_texture, texBase).g;
+      color.b = texture2D(u_texture, uvOffset + (sampleUV - aberrDir * aberrOff) * uvRange).b;
+      color.a = 1.0;
+
+      /* ── subtle cursor glow ── */
+      color.rgb += exp(-mouseDist * mouseDist * 25.0) * 0.045;
+
+      /* ── film grain ── */
+      float grain = (hash(v_uv * u_resolution * 0.5 + fract(u_time * 7.0) * 100.0) - 0.5) * 0.035;
+      color.rgb += grain;
+
+      /* ── vignette ── */
+      float vig = smoothstep(1.3, 0.4, distance(v_uv, vec2(0.5)) * 1.7);
+      color.rgb *= mix(0.55, 1.0, vig);
+
+      gl_FragColor = color;
+    }
+  `;
+
+  /* ═══════════════════════════════════════════════════════════
+     DOM REFERENCES
+  ═══════════════════════════════════════════════════════════ */
+  const canvasEl  = document.getElementById('canvas');
+  const loader    = document.getElementById('loader');
+  const loaderBar = document.getElementById('loader-bar');
+  const loaderTxt = document.getElementById('loader-text');
+  const dotEl     = document.getElementById('cursorDot');
+  const ringEl    = document.getElementById('cursorRing');
+
+  /* ═══════════════════════════════════════════════════════════
+     WEBGL SETUP (with 2D canvas fallback)
+  ═══════════════════════════════════════════════════════════ */
+  let gl, program, tex, uniforms = {};
+  let useWebGL = true;
+  let ctx2d;
+
+  function compileShader(type, src) {
+    const sh = gl.createShader(type);
+    gl.shaderSource(sh, src);
+    gl.compileShader(sh);
+    if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) {
+      console.error('Shader error:', gl.getShaderInfoLog(sh));
+      gl.deleteShader(sh);
+      return null;
+    }
+    return sh;
+  }
+
+  function initWebGL() {
+    gl = canvasEl.getContext('webgl', { alpha: false, antialias: false })
+      || canvasEl.getContext('experimental-webgl', { alpha: false, antialias: false });
+    if (!gl) return false;
+
+    const vs = compileShader(gl.VERTEX_SHADER, VERT_SRC);
+    const fs = compileShader(gl.FRAGMENT_SHADER, FRAG_SRC);
+    if (!vs || !fs) return false;
+
+    program = gl.createProgram();
+    gl.attachShader(program, vs);
+    gl.attachShader(program, fs);
+    gl.linkProgram(program);
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+      console.error('Link error:', gl.getProgramInfoLog(program));
+      return false;
+    }
+    gl.useProgram(program);
+
+    /* fullscreen quad: clip coords + tex coords (screen-space: 0,0 = top-left) */
+    const verts = new Float32Array([
+      -1,  1,  0, 0,
+       1,  1,  1, 0,
+      -1, -1,  0, 1,
+       1, -1,  1, 1,
+    ]);
+    const buf = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+    gl.bufferData(gl.ARRAY_BUFFER, verts, gl.STATIC_DRAW);
+
+    const aPos = gl.getAttribLocation(program, 'a_position');
+    const aTex = gl.getAttribLocation(program, 'a_texCoord');
+    gl.enableVertexAttribArray(aPos);
+    gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 16, 0);
+    gl.enableVertexAttribArray(aTex);
+    gl.vertexAttribPointer(aTex, 2, gl.FLOAT, false, 16, 8);
+
+    /* texture */
+    tex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+
+    /* cache uniform locations */
+    const u = (n) => gl.getUniformLocation(program, n);
+    uniforms.texture     = u('u_texture');
+    uniforms.resolution  = u('u_resolution');
+    uniforms.imageSize   = u('u_imageSize');
+    uniforms.mouse       = u('u_mouse');
+    uniforms.mouseVel    = u('u_mouseVel');
+    uniforms.mouseSpeed  = u('u_mouseSpeed');
+    uniforms.time        = u('u_time');
+    uniforms.rippleCount = u('u_rippleCount');
+    uniforms.ripples     = [];
+    for (let i = 0; i < MAX_RIPPLES; i++) {
+      uniforms.ripples[i] = u(`u_ripples[${i}]`);
+    }
+
+    gl.uniform1i(uniforms.texture, 0);
+    return true;
+  }
+
+  function initFallback() {
+    useWebGL = false;
+    ctx2d = canvasEl.getContext('2d');
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     FRAME STATE
+  ═══════════════════════════════════════════════════════════ */
+  const images = new Array(TOTAL_FRAMES);
+  let currentFrame = 0, targetFrame = 0;
+  let lastDrawnIdx = -1;
+  let isReady = false;
+  let imgW = 0, imgH = 0;
+  const startTime = performance.now() / 1000;
+
+  function framePath(i) {
+    return `frames-webp/frame_${String(i + 1).padStart(6, '0')}.webp`;
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     MOUSE / RIPPLE STATE
+  ═══════════════════════════════════════════════════════════ */
+  let mouseX = window.innerWidth / 2, mouseY = window.innerHeight / 2;
+  let prevMX = mouseX, prevMY = mouseY;
+  let smoothVelX = 0, smoothVelY = 0, smoothSpeed = 0;
+  let mouseInWindow = false;
+
+  /* cursor DOM positions */
+  let ringX = mouseX, ringY = mouseY;
+
+  /* ripples */
+  const ripples = [];
+  let lastRipX = 0, lastRipY = 0;
+
+  window.addEventListener('mouseenter', () => {
+    mouseInWindow = true;
+    dotEl.classList.remove('hidden');
+    ringEl.classList.remove('hidden');
+  });
+  window.addEventListener('mouseleave', () => {
+    mouseInWindow = false;
+    dotEl.classList.add('hidden');
+    ringEl.classList.add('hidden');
+  });
+  window.addEventListener('mousemove', (e) => {
+    mouseX = e.clientX;
+    mouseY = e.clientY;
+
+    /* spawn ripple every RIPPLE_SPACING px */
+    const dx = mouseX - lastRipX, dy = mouseY - lastRipY;
+    const d  = Math.sqrt(dx * dx + dy * dy);
+    if (d > RIPPLE_SPACING) {
+      const speed = Math.min(d / 30, 3);
+      ripples.push({
+        x: mouseX / window.innerWidth,
+        y: mouseY / window.innerHeight,
+        t: performance.now() / 1000 - startTime,
+        s: speed * 0.5,
+      });
+      if (ripples.length > MAX_RIPPLES) ripples.shift();
+      lastRipX = mouseX;
+      lastRipY = mouseY;
+    }
+  });
+
+  /* ═══════════════════════════════════════════════════════════
+     SCROLL HANDLING
+  ═══════════════════════════════════════════════════════════ */
+  window.addEventListener('wheel', (e) => {
+    if (!isReady) return;
+    e.preventDefault();
+    let delta = e.deltaY;
+    if (e.deltaMode === 1) delta *= 30;
+    if (e.deltaMode === 2) delta *= window.innerHeight;
+    targetFrame += delta * SCROLL_SPEED;
+    targetFrame = Math.min(Math.max(targetFrame, 0), TOTAL_FRAMES - 1);
+  }, { passive: false });
+
+  let lastTouchY = 0;
+  window.addEventListener('touchstart', (e) => { lastTouchY = e.touches[0].clientY; }, { passive: true });
+  window.addEventListener('touchmove', (e) => {
+    if (!isReady) return;
+    e.preventDefault();
+    const y = e.touches[0].clientY;
+    targetFrame += (lastTouchY - y) * 0.5;
+    targetFrame = Math.min(Math.max(targetFrame, 0), TOTAL_FRAMES - 1);
+    lastTouchY = y;
+  }, { passive: false });
+
+  /* ═══════════════════════════════════════════════════════════
+     RESIZE
+  ═══════════════════════════════════════════════════════════ */
+  function resize() {
+    canvasEl.width  = window.innerWidth;
+    canvasEl.height = window.innerHeight;
+    if (gl) gl.viewport(0, 0, canvasEl.width, canvasEl.height);
+  }
+  window.addEventListener('resize', resize);
+
+  /* ═══════════════════════════════════════════════════════════
+     DRAWING
+  ═══════════════════════════════════════════════════════════ */
+  function drawGL(idx) {
+    const img = images[idx];
+    if (!img) return;
+
+    const now = performance.now() / 1000 - startTime;
+
+    /* upload new texture only when frame changes */
+    if (idx !== lastDrawnIdx) {
+      gl.bindTexture(gl.TEXTURE_2D, tex);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+      imgW = img.naturalWidth;
+      imgH = img.naturalHeight;
+      lastDrawnIdx = idx;
+    }
+
+    /* prune old ripples */
+    while (ripples.length && now - ripples[0].t > RIPPLE_LIFE) ripples.shift();
+
+    /* compute smooth mouse velocity (in normalised screen coords) */
+    const rawVX = (mouseX - prevMX) / window.innerWidth;
+    const rawVY = (mouseY - prevMY) / window.innerHeight;
+    smoothVelX += (rawVX - smoothVelX) * 0.18;
+    smoothVelY += (rawVY - smoothVelY) * 0.18;
+    smoothSpeed = Math.sqrt(smoothVelX * smoothVelX + smoothVelY * smoothVelY);
+    prevMX = mouseX; prevMY = mouseY;
+
+    /* set uniforms */
+    gl.uniform2f(uniforms.resolution, canvasEl.width, canvasEl.height);
+    gl.uniform2f(uniforms.imageSize, imgW, imgH);
+    gl.uniform2f(uniforms.mouse, mouseX / window.innerWidth, mouseY / window.innerHeight);
+    gl.uniform2f(uniforms.mouseVel, smoothVelX, smoothVelY);
+    gl.uniform1f(uniforms.mouseSpeed, smoothSpeed);
+    gl.uniform1f(uniforms.time, now);
+    gl.uniform1i(uniforms.rippleCount, ripples.length);
+
+    for (let i = 0; i < MAX_RIPPLES; i++) {
+      if (i < ripples.length) {
+        gl.uniform4f(uniforms.ripples[i], ripples[i].x, ripples[i].y, ripples[i].t, ripples[i].s);
+      } else {
+        gl.uniform4f(uniforms.ripples[i], 0, 0, -99, 0);
+      }
+    }
+
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  }
+
+  function draw2D(idx) {
+    const img = images[idx];
+    if (!img) return;
+    const cw = canvasEl.width, ch = canvasEl.height;
+    const iw = img.naturalWidth, ih = img.naturalHeight;
+    const sc = Math.max(cw / iw, ch / ih);
+    const w = iw * sc, h = ih * sc;
+    ctx2d.clearRect(0, 0, cw, ch);
+    ctx2d.drawImage(img, (cw - w) / 2, (ch - h) / 2, w, h);
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     CUSTOM CURSOR UPDATE
+  ═══════════════════════════════════════════════════════════ */
+  function updateCursor() {
+    /* dot follows exactly */
+    dotEl.style.left = mouseX + 'px';
+    dotEl.style.top  = mouseY + 'px';
+
+    /* ring follows with smooth delay */
+    ringX += (mouseX - ringX) * 0.14;
+    ringY += (mouseY - ringY) * 0.14;
+
+    const vx = mouseX - ringX;
+    const vy = mouseY - ringY;
+    const speed = Math.sqrt(vx * vx + vy * vy);
+
+    /* morph: stretch in direction of movement */
+    const angle  = Math.atan2(vy, vx);
+    const scaleX = 1 + Math.min(speed * 0.012, 0.5);
+    const scaleY = 1 - Math.min(speed * 0.006, 0.2);
+    /* idle breathing pulse */
+    const breath = 1 + Math.sin(performance.now() * 0.003) * 0.04;
+
+    ringEl.style.left = ringX + 'px';
+    ringEl.style.top  = ringY + 'px';
+    ringEl.style.transform =
+      `translate3d(-50%,-50%,0) rotate(${angle}rad) scale(${scaleX * breath}, ${scaleY * breath})`;
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     MAIN ANIMATION LOOP
+  ═══════════════════════════════════════════════════════════ */
+  function animate() {
+    /* smooth frame interpolation */
+    const diff = targetFrame - currentFrame;
+    if (Math.abs(diff) > 0.5) {
+      currentFrame += diff * LERP_SPEED;
+    } else {
+      currentFrame = targetFrame;
+    }
+    const idx = Math.min(Math.max(Math.round(currentFrame), 0), TOTAL_FRAMES - 1);
+
+    if (useWebGL) drawGL(idx); else draw2D(idx);
+    updateCursor();
+    requestAnimationFrame(animate);
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     PRELOAD IMAGES
+  ═══════════════════════════════════════════════════════════ */
+  function preloadImages() {
+    let loaded = 0;
+    return new Promise((resolve) => {
+      for (let i = 0; i < TOTAL_FRAMES; i++) {
+        const img = new Image();
+        img.src = framePath(i);
+        img.onload = () => {
+          images[i] = img;
+          loaded++;
+          const pct = Math.round((loaded / TOTAL_FRAMES) * 100);
+          loaderBar.style.width = pct + '%';
+          loaderTxt.textContent = `Loading ${pct}%`;
+          if (loaded === TOTAL_FRAMES) resolve();
+        };
+        img.onerror = () => {
+          loaded++;
+          console.warn('Failed: frame', i + 1);
+          if (loaded === TOTAL_FRAMES) resolve();
+        };
+      }
+    });
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     INIT
+  ═══════════════════════════════════════════════════════════ */
+  async function init() {
+    resize();
+    if (!initWebGL()) {
+      console.warn('WebGL unavailable — falling back to 2D canvas');
+      initFallback();
+    }
+
+    await preloadImages();
+
+    isReady = true;
+    loader.classList.add('hidden');
+    currentFrame = 0;
+    targetFrame  = 0;
+    animate();
+  }
+
+  init();
+  </script>
+</body>
+</html>
