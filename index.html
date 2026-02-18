@@ -12,6 +12,7 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Michroma&family=Orbitron:wght@400;500;600;700;800;900&family=Bebas+Neue&family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap"
     rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <style>
     * {
       margin: 0;
@@ -485,53 +486,7 @@
       margin-bottom: 56px;
     }
 
-    /* Service cards grid */
-    .services-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 24px;
-      margin-top: 40px;
-    }
 
-    .service-card {
-      border: 1px solid rgba(255, 255, 255, 0.06);
-      border-radius: 16px;
-      padding: 36px;
-      background: rgba(255, 255, 255, 0.02);
-      transition: border-color 0.4s, background 0.4s, transform 0.4s;
-    }
-
-    .service-card:hover {
-      border-color: rgba(255, 255, 255, 0.15);
-      background: rgba(255, 255, 255, 0.04);
-      transform: translateY(-4px);
-    }
-
-    .service-card h3 {
-      font-family: 'Space Grotesk', sans-serif;
-      font-size: 18px;
-      font-weight: 600;
-      color: #fff;
-      margin-bottom: 12px;
-    }
-
-    .service-card p {
-      font-size: 13px;
-      line-height: 1.7;
-      color: rgba(255, 255, 255, 0.4);
-    }
-
-    .service-icon {
-      width: 40px;
-      height: 40px;
-      border-radius: 10px;
-      background: rgba(255, 255, 255, 0.05);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 20px;
-      font-size: 18px;
-    }
 
     /* AI Products */
     .products-grid {
@@ -886,10 +841,120 @@
     }
 
     /* ═══════════════════════════════════════
-       SERVICES OVERLAY — Frames 170-294
-       NO dark bg — video frames show through
+       3D TAGLINE — Frames 40-175
     ═══════════════════════════════════════ */
-    #services-overlay {
+    #tagline-3d {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 46;
+      pointer-events: none;
+      perspective: 800px;
+      perspective-origin: 50% 50%;
+      opacity: 0;
+      will-change: opacity;
+      overflow: hidden;
+    }
+
+    /* ── Phase containers ── */
+    .tag3d-phase {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      transform-style: preserve-3d;
+    }
+
+    .tag3d-phase-left {
+      left: 56px;
+    }
+
+    .tag3d-phase-right {
+      right: 56px;
+      text-align: right;
+    }
+
+    /* ── Individual word ── */
+    .tag3d-word {
+      display: block;
+      font-family: 'Michroma', sans-serif;
+      font-weight: 400;
+      font-size: clamp(28px, 4vw, 58px);
+      line-height: 1.1;
+      color: #fff;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      opacity: 0;
+      will-change: transform, opacity;
+      transform-style: preserve-3d;
+      backface-visibility: hidden;
+      position: relative;
+    }
+
+    .tag3d-word span {
+      display: inline-block;
+      transition: transform 0.25s cubic-bezier(.25, .46, .45, .94), text-shadow 0.25s ease, color 0.25s;
+      will-change: transform;
+      position: relative;
+      transform-style: preserve-3d;
+    }
+
+    /* Glitch animation — same as brand */
+    .tag3d-word span.tag-glitch {
+      animation: tagGlitch 0.35s ease forwards;
+    }
+
+    @keyframes tagGlitch {
+      0% {
+        transform: translate(0, 0) skewX(0);
+        color: #fff;
+        text-shadow: 0 0 20px rgba(255, 255, 255, 0.4);
+      }
+
+      25% {
+        transform: translate(-3px, 2px) skewX(-10deg);
+        color: #0ff;
+        text-shadow: 2px 0 #f0f, -2px 0 #0ff;
+      }
+
+      50% {
+        transform: translate(3px, -1px) skewX(6deg);
+        color: #f0f;
+        text-shadow: -2px 0 #f0f, 2px 0 #0ff;
+      }
+
+      75% {
+        transform: translate(-1px, 1px) skewX(-3deg);
+        color: #fff;
+      }
+
+      100% {
+        transform: translate(0, 0) skewX(0);
+        color: #fff;
+        text-shadow: 0 0 20px rgba(255, 255, 255, 0.4);
+      }
+    }
+
+    .tag3d-phase-right .tag3d-word {
+      font-size: clamp(24px, 3.5vw, 50px);
+    }
+
+    @media (max-width: 768px) {
+      .tag3d-phase-left {
+        left: 24px;
+      }
+
+      .tag3d-phase-right {
+        right: 24px;
+      }
+    }
+
+
+    /* ═══════════════════════════════════════
+       3D SERVICES — Full-Bleed Cinematic
+    ═══════════════════════════════════════ */
+    #services-3d {
       position: fixed;
       top: 0;
       left: 0;
@@ -898,361 +963,226 @@
       z-index: 45;
       pointer-events: none;
       opacity: 0;
-      overflow: hidden;
       will-change: opacity;
     }
 
-    #services-overlay.active {
-      pointer-events: auto;
-    }
-
-    /* ── Main Layout: two-column ── */
-    .svc-layout {
+    #svc3dCanvas {
       position: absolute;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
-      display: flex;
-      align-items: center;
-      padding: 0 clamp(32px, 4vw, 64px);
-      gap: clamp(24px, 3vw, 56px);
     }
 
-    /* ── Left Column: header ── */
-    .svc-left {
-      flex: 0 0 clamp(240px, 22vw, 340px);
-      opacity: 0;
-      transform: translateX(-60px);
-      transition: opacity 0.9s ease, transform 0.9s cubic-bezier(.25, .46, .45, .94);
-    }
-
-    .svc-left.visible {
-      opacity: 1;
-      transform: translateX(0);
-    }
-
-    .svc-tag {
-      font-family: 'Space Mono', monospace;
-      font-size: 10px;
-      letter-spacing: 5px;
-      color: #fff;
-      text-transform: uppercase;
-      margin-bottom: 14px;
-      text-shadow: 0 0 20px rgba(0, 0, 0, 0.9), 0 0 40px rgba(0, 0, 0, 0.6);
-    }
-
-    .svc-title {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: clamp(52px, 6vw, 88px);
-      color: #fff;
-      line-height: 0.92;
-      letter-spacing: 0.04em;
-      margin-bottom: 18px;
-      text-shadow: 0 2px 30px rgba(0, 0, 0, 0.8), 0 0 60px rgba(0, 0, 0, 0.5), 0 0 4px rgba(255, 255, 255, 0.15);
-    }
-
-    .svc-divider {
-      width: 48px;
-      height: 2px;
-      background: linear-gradient(90deg, rgba(255, 255, 255, 0.6), transparent);
-      margin-bottom: 18px;
-      border-radius: 2px;
-    }
-
-    .svc-subtitle {
-      font-family: 'Space Grotesk', sans-serif;
-      font-size: 13px;
-      color: rgba(255, 255, 255, 0.75);
-      line-height: 1.7;
-      text-shadow: 0 1px 12px rgba(0, 0, 0, 0.9), 0 0 30px rgba(0, 0, 0, 0.7);
-      max-width: 300px;
-    }
-
-    /* ── Right Column: cards grid ── */
-    .svc-right {
-      flex: 1;
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      grid-template-rows: repeat(2, 1fr);
-      gap: clamp(10px, 1.2vw, 16px);
-      max-height: 80vh;
-    }
-
-    /* ── Individual Card ── */
-    .svc-card {
-      position: relative;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 16px;
-      padding: clamp(16px, 1.5vw, 24px);
-      background: rgba(0, 0, 0, 0.45);
-      backdrop-filter: blur(20px) saturate(1.4);
-      -webkit-backdrop-filter: blur(20px) saturate(1.4);
-      overflow: hidden;
-      opacity: 0;
-      transform: translateY(40px) scale(0.92);
-      transition: opacity 0.6s ease, transform 0.6s cubic-bezier(.25, .46, .45, .94),
-        border-color 0.35s, background 0.35s, box-shadow 0.35s;
-      cursor: none;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .svc-card.visible {
-      opacity: 1;
-      transform: translateY(0) scale(1);
-    }
-
-    /* Top gradient line on hover */
-    .svc-card::before {
-      content: '';
+    /* Bottom gradient vignette — makes text readable without boxes */
+    .svc3d-vignette {
       position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 1px;
-      background: linear-gradient(90deg, transparent 10%, var(--accent) 50%, transparent 90%);
-      opacity: 0;
-      transition: opacity 0.4s;
-    }
-
-    /* Mouse-following glow */
-    .svc-card::after {
-      content: '';
-      position: absolute;
-      top: -50%;
-      left: -50%;
-      width: 200%;
-      height: 200%;
-      background: radial-gradient(circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
-          var(--accent-dim) 0%, transparent 45%);
-      pointer-events: none;
-      opacity: 0;
-      transition: opacity 0.4s;
-    }
-
-    .svc-card:hover {
-      border-color: rgba(255, 255, 255, 0.18);
-      background: rgba(0, 0, 0, 0.55);
-      transform: translateY(-4px) scale(1.03);
-      box-shadow: 0 16px 50px rgba(0, 0, 0, 0.5), 0 0 1px rgba(255, 255, 255, 0.1);
-    }
-
-    .svc-card:hover::before,
-    .svc-card:hover::after {
-      opacity: 1;
-    }
-
-    /* Left accent bar */
-    .svc-card-bar {
-      position: absolute;
-      top: 20%;
-      left: 0;
-      bottom: 20%;
-      width: 2px;
-      background: var(--accent);
-      border-radius: 0 2px 2px 0;
-      opacity: 0;
-      transition: opacity 0.4s, top 0.4s, bottom 0.4s;
-    }
-
-    .svc-card:hover .svc-card-bar {
-      opacity: 1;
-      top: 12%;
-      bottom: 12%;
-    }
-
-    /* Card color variables */
-    .svc-card:nth-child(1) {
-      --accent: #00d4ff;
-      --accent-dim: rgba(0, 212, 255, 0.06);
-    }
-
-    .svc-card:nth-child(2) {
-      --accent: #a855f7;
-      --accent-dim: rgba(168, 85, 247, 0.06);
-    }
-
-    .svc-card:nth-child(3) {
-      --accent: #10b981;
-      --accent-dim: rgba(16, 185, 129, 0.06);
-    }
-
-    .svc-card:nth-child(4) {
-      --accent: #f59e0b;
-      --accent-dim: rgba(245, 158, 11, 0.06);
-    }
-
-    .svc-card:nth-child(5) {
-      --accent: #ec4899;
-      --accent-dim: rgba(236, 72, 153, 0.06);
-    }
-
-    .svc-card:nth-child(6) {
-      --accent: #3b82f6;
-      --accent-dim: rgba(59, 130, 246, 0.06);
-    }
-
-    .svc-icon-wrap {
-      width: 38px;
-      height: 38px;
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: clamp(8px, 1vw, 14px);
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.06);
-      transition: transform 0.35s, box-shadow 0.35s, border-color 0.35s;
-      flex-shrink: 0;
-    }
-
-    .svc-card:hover .svc-icon-wrap {
-      transform: scale(1.1);
-      border-color: var(--accent);
-      box-shadow: 0 0 16px var(--accent-dim);
-    }
-
-    .svc-icon-wrap svg {
-      width: 20px;
-      height: 20px;
-      stroke-width: 1.5;
-      fill: none;
-      stroke: var(--accent);
-      filter: drop-shadow(0 0 4px var(--accent-dim));
-    }
-
-    .svc-card h3 {
-      font-family: 'Space Grotesk', sans-serif;
-      font-size: clamp(13px, 1.1vw, 16px);
-      font-weight: 600;
-      color: #fff;
-      margin-bottom: clamp(4px, 0.5vw, 8px);
-      letter-spacing: 0.02em;
-      text-shadow: 0 1px 8px rgba(0, 0, 0, 0.5);
-    }
-
-    .svc-card p {
-      font-size: clamp(11px, 0.8vw, 13px);
-      line-height: 1.55;
-      color: rgba(255, 255, 255, 0.5);
-      text-shadow: 0 1px 6px rgba(0, 0, 0, 0.5);
-    }
-
-    .svc-card:hover p {
-      color: rgba(255, 255, 255, 0.7);
-    }
-
-    /* ── Bottom Marquee — Partners ── */
-    .svc-marquee-wrap {
-      position: absolute;
-      bottom: clamp(16px, 2.5vh, 36px);
+      bottom: 0;
       left: 0;
       width: 100%;
-      opacity: 0;
-      transform: translateY(20px);
-      transition: opacity 0.8s ease 0.5s, transform 0.8s cubic-bezier(.25, .46, .45, .94) 0.5s;
+      height: 50%;
+      background: linear-gradient(to top, rgba(0, 0, 0, 0.75) 0%, rgba(0, 0, 0, 0.3) 45%, transparent 100%);
+      pointer-events: none;
+      z-index: 1;
     }
 
-    .svc-marquee-wrap.visible {
-      opacity: 1;
-      transform: translateY(0);
-    }
-
-    .svc-marquee-label {
-      text-align: center;
+    /* Top label */
+    .svc3d-top {
+      position: absolute;
+      top: clamp(28px, 4vh, 55px);
+      left: 50%;
+      transform: translateX(-50%);
       font-family: 'Space Mono', monospace;
       font-size: 9px;
-      letter-spacing: 4px;
-      color: rgba(255, 255, 255, 0.25);
+      letter-spacing: 8px;
       text-transform: uppercase;
-      margin-bottom: 10px;
-      text-shadow: 0 0 10px rgba(0, 0, 0, 0.8);
+      color: rgba(255, 255, 255, 0.2);
+      z-index: 4;
     }
 
-    .svc-marquee {
-      position: relative;
-      overflow: hidden;
-      height: 36px;
-    }
-
-    .svc-marquee::before,
-    .svc-marquee::after {
-      content: '';
+    /* Vertical dot nav — left edge */
+    .svc3d-nav {
       position: absolute;
-      top: 0;
-      width: 100px;
-      height: 100%;
-      z-index: 3;
+      left: clamp(24px, 3vw, 48px);
+      top: 50%;
+      transform: translateY(-50%);
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      z-index: 4;
+    }
+
+    .svc3d-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.15);
+      transition: background 0.4s, transform 0.4s, box-shadow 0.4s;
+    }
+
+    .svc3d-dot.active {
+      background: var(--svc-accent, #00d4ff);
+      transform: scale(1.5);
+      box-shadow: 0 0 12px var(--svc-accent, #00d4ff), 0 0 30px var(--svc-accent, #00d4ff)40;
+    }
+
+    /* Large faded number — right edge */
+    .svc3d-num {
+      position: absolute;
+      right: clamp(24px, 4vw, 60px);
+      top: 50%;
+      transform: translateY(-50%);
+      font-family: 'Michroma', sans-serif;
+      font-size: clamp(100px, 18vw, 280px);
+      color: rgba(255, 255, 255, 0.025);
+      line-height: 1;
+      letter-spacing: -0.02em;
+      z-index: 1;
       pointer-events: none;
     }
 
-    .svc-marquee::before {
-      left: 0;
-      background: linear-gradient(90deg, rgba(0, 0, 0, 0.6), transparent);
+    /* Bottom text block — sits on the vignette */
+    .svc3d-bottom {
+      position: absolute;
+      bottom: clamp(40px, 6vh, 80px);
+      left: clamp(48px, 6vw, 100px);
+      max-width: 600px;
+      z-index: 4;
     }
 
-    .svc-marquee::after {
-      right: 0;
-      background: linear-gradient(-90deg, rgba(0, 0, 0, 0.6), transparent);
+    .svc3d-title {
+      font-family: 'Michroma', sans-serif;
+      font-size: clamp(26px, 4vw, 52px);
+      color: #fff;
+      letter-spacing: 0.12em;
+      line-height: 1.15;
+      margin-bottom: 6px;
+      text-shadow:
+        0 2px 40px rgba(0, 0, 0, 0.95),
+        0 0 80px rgba(0, 0, 0, 0.5);
     }
 
-    .svc-marquee-track {
-      display: flex;
-      gap: 32px;
-      align-items: center;
-      width: max-content;
-      animation: svcMarquee 40s linear infinite;
-      height: 36px;
-    }
-
-    @keyframes svcMarquee {
+    /* ── Character entrance animation ── */
+    @keyframes svc3dCharIn {
       0% {
-        transform: translateX(0);
+        opacity: 0;
+        transform: translateY(28px) rotateX(-50deg);
+        filter: blur(6px);
+      }
+
+      60% {
+        filter: blur(0);
       }
 
       100% {
-        transform: translateX(-50%);
+        opacity: 1;
+        transform: translateY(0) rotateX(0);
+        filter: blur(0);
       }
     }
 
-    .svc-logo-chip {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 6px 16px;
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 20px;
-      background: rgba(0, 0, 0, 0.3);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      white-space: nowrap;
-      transition: border-color 0.3s, transform 0.3s;
-      cursor: none;
+    .svc3d-title .ch {
+      display: inline-block;
+      opacity: 0;
+      animation: svc3dCharIn 0.55s cubic-bezier(.22, 1, .36, 1) forwards;
+      will-change: transform, opacity, filter;
     }
 
-    .svc-logo-chip:hover {
-      border-color: rgba(255, 255, 255, 0.2);
-      transform: scale(1.06);
+    .svc3d-title .ch-space {
+      display: inline-block;
+      width: 0.3em;
     }
 
-    .svc-logo-chip .chip-dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      flex-shrink: 0;
+    /* ── Description slide-up ── */
+    @keyframes svc3dDescIn {
+      0% {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+
+      100% {
+        opacity: 0.75;
+        transform: translateY(0);
+      }
     }
 
-    .svc-logo-chip span {
+    .svc3d-desc {
       font-family: 'Space Grotesk', sans-serif;
-      font-size: 11px;
-      font-weight: 500;
-      color: rgba(255, 255, 255, 0.5);
-      letter-spacing: 0.5px;
+      font-size: clamp(13px, 1.4vw, 18px);
+      color: rgba(255, 255, 255, 0.75);
+      line-height: 1.75;
+      text-shadow: 0 2px 20px rgba(0, 0, 0, 0.9), 0 0 40px rgba(0, 0, 0, 0.6);
+      max-width: 520px;
+      opacity: 0;
     }
 
-    .svc-logo-chip:hover span {
-      color: rgba(255, 255, 255, 0.8);
+    .svc3d-desc.animate {
+      animation: svc3dDescIn 0.65s cubic-bezier(.22, 1, .36, 1) forwards;
+    }
+
+    /* ── Number entrance ── */
+    @keyframes svc3dNumIn {
+      0% {
+        opacity: 0;
+        transform: translateY(-50%) scale(0.7);
+      }
+
+      100% {
+        opacity: 0.45;
+        transform: translateY(-50%) scale(1);
+      }
+    }
+
+    .svc3d-num.animate {
+      animation: svc3dNumIn 0.7s 0.1s cubic-bezier(.22, 1, .36, 1) forwards;
+      opacity: 0;
+    }
+
+    /* ── Top label entrance ── */
+    @keyframes svc3dTopIn {
+      0% {
+        opacity: 0;
+        letter-spacing: 16px;
+      }
+
+      100% {
+        opacity: 0.2;
+        letter-spacing: 8px;
+      }
+    }
+
+    .svc3d-top.animate {
+      animation: svc3dTopIn 0.8s 0.05s cubic-bezier(.22, 1, .36, 1) forwards;
+      opacity: 0;
+    }
+
+    /* Accent underline */
+    .svc3d-line {
+      width: 0;
+      height: 2px;
+      margin: 10px 0 14px;
+      background: #00d4ff;
+      border-radius: 2px;
+      transition: width 0.6s 0.25s cubic-bezier(.25, .46, .45, .94), background 0.5s;
+      box-shadow: 0 0 12px currentColor;
+    }
+
+    .svc3d-line.visible {
+      width: clamp(60px, 8vw, 120px);
+    }
+
+    /* Circular progress ring — bottom right */
+    .svc3d-ring {
+      position: absolute;
+      bottom: clamp(30px, 5vh, 65px);
+      right: clamp(36px, 4vw, 64px);
+      width: 48px;
+      height: 48px;
+      z-index: 4;
+    }
+
+    .svc3d-ring circle {
+      transition: stroke 0.5s, stroke-dashoffset 0.15s linear;
     }
 
     @media (max-width: 768px) {
@@ -1279,54 +1209,19 @@
         gap: 40px;
       }
 
-      .services-grid {
-        grid-template-columns: 1fr;
+      .svc3d-bottom {
+        left: 24px;
+        bottom: 28px;
       }
 
-      .svc-layout {
-        flex-direction: column;
-        padding: 20px;
-        gap: 16px;
+      .svc3d-nav {
+        left: 16px;
+        gap: 14px;
       }
 
-      .svc-left {
-        flex: 0 0 auto;
-        text-align: center;
-      }
-
-      .svc-left .svc-divider {
-        margin: 0 auto 14px;
-      }
-
-      .svc-subtitle {
-        max-width: 100%;
-      }
-
-      .svc-right {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 10px;
-        max-height: 50vh;
-      }
-
-      .svc-card {
-        padding: 14px 12px;
-      }
-
-      .svc-icon-wrap {
-        width: 30px;
-        height: 30px;
-        margin-bottom: 6px;
-      }
-
-      .svc-icon-wrap svg {
-        width: 16px;
-        height: 16px;
-      }
-    }
-
-    @media (min-width: 769px) and (max-width: 1100px) {
-      .svc-right {
-        grid-template-columns: repeat(2, 1fr);
+      .svc3d-num {
+        font-size: 80px;
+        right: 16px;
       }
     }
   </style>
@@ -1355,7 +1250,7 @@
 
     <nav class="nav-right" id="navRight">
       <a class="nav-link" href="#" data-section="home">Home</a>
-      <a class="nav-link" href="#" data-section="services">Services</a>
+
       <a class="nav-link" href="#" data-section="magicai">Magic AI</a>
       <a class="nav-link" href="#" data-section="foundations">Foundations</a>
       <a class="nav-link" href="#" data-section="contact">Contact</a>
@@ -1369,92 +1264,48 @@
     </div>
   </div>
 
-  <!-- ═══ SERVICES OVERLAY — frames 170-294 ═══ -->
-  <div id="services-overlay">
-    <div class="svc-layout">
-      <!-- Left: Header -->
-      <div class="svc-left" id="svcLeft">
-        <div class="svc-tag">////// What We Do</div>
-        <div class="svc-title">SERV&shy;ICES</div>
-        <div class="svc-divider"></div>
-        <p class="svc-subtitle">We don't build technology to replace humans. We build it to expand human intelligence.
-        </p>
-      </div>
-      <!-- Right: Cards -->
-      <div class="svc-right" id="svcGrid">
-        <div class="svc-card" data-svc-delay="0">
-          <div class="svc-card-bar"></div>
-          <div class="svc-icon-wrap"><svg viewBox="0 0 24 24">
-              <path d="M12 2a4 4 0 0 1 4 4v1a4 4 0 0 1-8 0V6a4 4 0 0 1 4-4z" />
-              <path d="M6 10v2a6 6 0 0 0 12 0v-2" />
-              <line x1="12" y1="18" x2="12" y2="22" />
-              <path d="M8 22h8" />
-            </svg></div>
-          <h3>AI Integration</h3>
-          <p>Seamlessly integrate cutting-edge AI solutions into your existing infrastructure for enhanced automation
-            and insights.</p>
-        </div>
-        <div class="svc-card" data-svc-delay="100">
-          <div class="svc-card-bar"></div>
-          <div class="svc-icon-wrap"><svg viewBox="0 0 24 24">
-              <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
-              <line x1="8" y1="21" x2="16" y2="21" />
-              <line x1="12" y1="17" x2="12" y2="21" />
-              <polyline points="7 8 9 10 7 12" />
-              <line x1="11" y1="12" x2="15" y2="12" />
-            </svg></div>
-          <h3>Custom Software</h3>
-          <p>Tailored enterprise applications built from the ground up to match your unique business requirements.</p>
-        </div>
-        <div class="svc-card" data-svc-delay="200">
-          <div class="svc-card-bar"></div>
-          <div class="svc-icon-wrap"><svg viewBox="0 0 24 24">
-              <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
-              <circle cx="12" cy="18" r="1" fill="currentColor" stroke="none" />
-              <line x1="9" y1="6" x2="15" y2="6" />
-            </svg></div>
-          <h3>Mobile Applications</h3>
-          <p>Native and cross-platform mobile solutions that deliver exceptional user experiences.</p>
-        </div>
-        <div class="svc-card" data-svc-delay="300">
-          <div class="svc-card-bar"></div>
-          <div class="svc-icon-wrap"><svg viewBox="0 0 24 24">
-              <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" />
-              <polyline points="12 13 12 17" />
-              <polyline points="10 15 12 13 14 15" />
-            </svg></div>
-          <h3>Cloud Architecture</h3>
-          <p>Design and implement scalable cloud infrastructure that grows with your business needs.</p>
-        </div>
-        <div class="svc-card" data-svc-delay="400">
-          <div class="svc-card-bar"></div>
-          <div class="svc-icon-wrap"><svg viewBox="0 0 24 24">
-              <circle cx="12" cy="12" r="10" />
-              <path d="M2 12h20" />
-              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-            </svg></div>
-          <h3>Consulting & Strategy</h3>
-          <p>Expert guidance on digital transformation and technology roadmap planning.</p>
-        </div>
-        <div class="svc-card" data-svc-delay="500">
-          <div class="svc-card-bar"></div>
-          <div class="svc-icon-wrap"><svg viewBox="0 0 24 24">
-              <polyline points="16 18 22 12 16 6" />
-              <polyline points="8 6 2 12 8 18" />
-              <line x1="14" y1="4" x2="10" y2="20" />
-            </svg></div>
-          <h3>DevOps & Automation</h3>
-          <p>Streamline your development pipeline with modern DevOps practices and automation.</p>
-        </div>
-      </div>
+  <!-- ═══ 3D TAGLINE — frames 60-155 ═══ -->
+  <div id="tagline-3d">
+    <!-- Phase 1: Left side (frames 60-97) -->
+    <div class="tag3d-phase tag3d-phase-left" id="tag3dPhase1">
+      <div class="tag3d-word" data-word="0">Coding</div>
+      <div class="tag3d-word" data-word="1">the</div>
+      <div class="tag3d-word" data-word="2">Universe</div>
     </div>
-    <!-- Bottom Marquee -->
-    <div class="svc-marquee-wrap" id="svcMarquee">
-      <div class="svc-marquee-label">Trusted Technologies & Partners</div>
-      <div class="svc-marquee">
-        <div class="svc-marquee-track" id="svcMarqueeTrack"></div>
-      </div>
+    <!-- Phase 2: Right side (frames 97-155) -->
+    <div class="tag3d-phase tag3d-phase-right" id="tag3dPhase2">
+      <div class="tag3d-word" data-word="0">One</div>
+      <div class="tag3d-word" data-word="1">Pixel</div>
+      <div class="tag3d-word" data-word="2">at</div>
+      <div class="tag3d-word" data-word="3">a</div>
+      <div class="tag3d-word" data-word="4">Time</div>
     </div>
+  </div>
+
+  <!-- ═══ 3D SERVICES — Full-Bleed Cinematic ═══ -->
+  <div id="services-3d">
+    <canvas id="svc3dCanvas"></canvas>
+    <div class="svc3d-vignette"></div>
+    <div class="svc3d-top" id="svc3dTop">SERVICES</div>
+    <div class="svc3d-nav" id="svc3dNav">
+      <div class="svc3d-dot active" data-i="0"></div>
+      <div class="svc3d-dot" data-i="1"></div>
+      <div class="svc3d-dot" data-i="2"></div>
+      <div class="svc3d-dot" data-i="3"></div>
+      <div class="svc3d-dot" data-i="4"></div>
+      <div class="svc3d-dot" data-i="5"></div>
+    </div>
+    <div class="svc3d-num" id="svc3dNum">01</div>
+    <div class="svc3d-bottom" id="svc3dBottom">
+      <div class="svc3d-title" id="svc3dTitle"></div>
+      <div class="svc3d-line" id="svc3dLine"></div>
+      <div class="svc3d-desc" id="svc3dDesc"></div>
+    </div>
+    <svg class="svc3d-ring" viewBox="0 0 48 48">
+      <circle cx="24" cy="24" r="20" stroke-width="1" fill="none" stroke="rgba(255,255,255,0.06)" />
+      <circle id="svc3dRing" cx="24" cy="24" r="20" stroke-width="1.5" fill="none" stroke="#00d4ff"
+        stroke-dasharray="125.66" stroke-dashoffset="125.66" stroke-linecap="round" transform="rotate(-90 24 24)" />
+    </svg>
   </div>
 
   <!-- ═══ SECTION PANELS ═══ -->
@@ -1493,51 +1344,7 @@
     </div>
   </div>
 
-  <!-- SERVICES -->
-  <div class="section-panel" id="panel-services">
-    <button class="panel-close" onclick="closePanel()"><svg viewBox="0 0 24 24" fill="none" stroke-width="2">
-        <line x1="6" y1="6" x2="18" y2="18" />
-        <line x1="18" y1="6" x2="6" y2="18" />
-      </svg></button>
-    <div class="panel-inner">
-      <p class="panel-tag">////// What We Do</p>
-      <div class="panel-title">SERVICES</div>
-      <p class="panel-desc">We don't build technology to replace humans. We build it to expand human intelligence.</p>
-      <div class="services-grid">
-        <div class="service-card">
-          <div class="service-icon">🤖</div>
-          <h3>AI Integration</h3>
-          <p>Seamlessly integrate cutting-edge AI solutions into your existing infrastructure for enhanced automation
-            and insights.</p>
-        </div>
-        <div class="service-card">
-          <div class="service-icon">⚙️</div>
-          <h3>Custom Software</h3>
-          <p>Tailored enterprise applications built from the ground up to match your unique business requirements.</p>
-        </div>
-        <div class="service-card">
-          <div class="service-icon">📱</div>
-          <h3>Mobile Applications</h3>
-          <p>Native and cross-platform mobile solutions that deliver exceptional user experiences.</p>
-        </div>
-        <div class="service-card">
-          <div class="service-icon">☁️</div>
-          <h3>Cloud Architecture</h3>
-          <p>Design and implement scalable cloud infrastructure that grows with your business needs.</p>
-        </div>
-        <div class="service-card">
-          <div class="service-icon">🧭</div>
-          <h3>Consulting &amp; Strategy</h3>
-          <p>Expert guidance on digital transformation and technology roadmap planning.</p>
-        </div>
-        <div class="service-card">
-          <div class="service-icon">🔄</div>
-          <h3>DevOps &amp; Automation</h3>
-          <p>Streamline your development pipeline with modern DevOps practices and automation.</p>
-        </div>
-      </div>
-    </div>
-  </div>
+
 
   <!-- MAGIC AI -->
   <div class="section-panel" id="panel-magicai">
@@ -1658,8 +1465,8 @@
     const MAX_RIPPLES = 15;
     const RIPPLE_SPACING = 30;
     const RIPPLE_LIFE = 1.8;
-    const OVERLAY_FADE_START = 90;
-    const OVERLAY_FADE_END = 100;
+    const OVERLAY_FADE_START = 30;
+    const OVERLAY_FADE_END = 45;
 
     /* ═══════════════════════════════════════════════════════════
        SOUND EFFECTS (Web Audio API)
@@ -2111,106 +1918,206 @@
     function updateAmbientVolume(frameIdx) { /* removed */ }
 
     /* ═══════════════════════════════════════════════════════════
-       SERVICES OVERLAY (frames 170-294) — extended +30 frames
+       3D TAGLINE (frames 40-175) — two-phase, per-letter 3D depth
     ═══════════════════════════════════════════════════════════ */
-    const SVC_FADE_IN_START = 170;
-    const SVC_FADE_IN_END = 185;
-    const SVC_FADE_OUT_START = 280;
-    const SVC_FADE_OUT_END = 294;
+    const TAG3D_START = 40;
+    const TAG3D_PHASE2 = 97;
+    const TAG3D_END = 175;
 
-    const svcOverlay = document.getElementById('services-overlay');
-    const svcLeft = document.getElementById('svcLeft');
-    const svcMarquee = document.getElementById('svcMarquee');
-    const svcCards = document.querySelectorAll('.svc-card');
-    let svcActive = false;
+    const tagline3d = document.getElementById('tagline-3d');
+    const tag3dPhase1 = document.getElementById('tag3dPhase1');
+    const tag3dPhase2 = document.getElementById('tag3dPhase2');
+    const p1Words = tag3dPhase1.querySelectorAll('.tag3d-word');
+    const p2Words = tag3dPhase2.querySelectorAll('.tag3d-word');
 
-    // No particles needed — clean design, no dark bg
-    function buildSvcParticles() { /* intentionally empty — no bg overlay */ }
+    // Easing helpers
+    function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+    function easeOutQuart(t) { return 1 - Math.pow(1 - t, 4); }
+    function clamp01(v) { return Math.max(0, Math.min(1, v)); }
 
-    // Build single-row marquee of tech partner chips
-    function buildStackedLogos() {
-      const techs = [
-        { name: 'OpenAI', color: '#10a37f' },
-        { name: 'Google Cloud', color: '#4285f4' },
-        { name: 'AWS', color: '#ff9900' },
-        { name: 'Azure', color: '#0078d4' },
-        { name: 'Docker', color: '#2496ed' },
-        { name: 'Kubernetes', color: '#326ce5' },
-        { name: 'React', color: '#61dafb' },
-        { name: 'Node.js', color: '#68a063' },
-        { name: 'TensorFlow', color: '#ff6f00' },
-        { name: 'PyTorch', color: '#ee4c2c' },
-        { name: 'PostgreSQL', color: '#336791' },
-        { name: 'MongoDB', color: '#47a248' },
-        { name: 'Redis', color: '#dc382d' },
-        { name: 'GraphQL', color: '#e535ab' },
-        { name: 'Figma', color: '#a259ff' },
-        { name: 'Vercel', color: '#ccc' },
-      ];
-
-      function makeChip(t) {
-        return `<div class="svc-logo-chip">
-          <div class="chip-dot" style="background:${t.color}"></div>
-          <span>${t.name}</span>
-        </div>`;
-      }
-
-      const track = document.getElementById('svcMarqueeTrack');
-      const html = techs.map(makeChip).join('');
-      track.innerHTML = html + html + html; // triple for seamless infinite
-    }
-
-    // Mouse-tracking spotlight on cards
-    svcCards.forEach(card => {
-      card.addEventListener('mousemove', (e) => {
-        const rect = card.getBoundingClientRect();
-        card.style.setProperty('--mouse-x', ((e.clientX - rect.left) / rect.width * 100) + '%');
-        card.style.setProperty('--mouse-y', ((e.clientY - rect.top) / rect.height * 100) + '%');
+    // Build per-letter spans with glitch + 3D depth
+    function buildTaglineLetters() {
+      document.querySelectorAll('.tag3d-word').forEach(word => {
+        const text = word.textContent;
+        word.textContent = '';
+        text.split('').forEach((ch, i) => {
+          const s = document.createElement('span');
+          s.textContent = ch;
+          s.style.setProperty('--i', i);
+          s.style.setProperty('--depth', i); // used for per-letter Z offset
+          word.appendChild(s);
+        });
       });
-    });
-
-    function updateServicesOverlay(frameIdx) {
-      let opacity = 0;
-
-      if (frameIdx < SVC_FADE_IN_START) {
-        opacity = 0;
-      } else if (frameIdx >= SVC_FADE_IN_START && frameIdx < SVC_FADE_IN_END) {
-        opacity = (frameIdx - SVC_FADE_IN_START) / (SVC_FADE_IN_END - SVC_FADE_IN_START);
-      } else if (frameIdx >= SVC_FADE_IN_END && frameIdx <= SVC_FADE_OUT_START) {
-        opacity = 1;
-      } else if (frameIdx > SVC_FADE_OUT_START && frameIdx <= SVC_FADE_OUT_END) {
-        opacity = 1 - (frameIdx - SVC_FADE_OUT_START) / (SVC_FADE_OUT_END - SVC_FADE_OUT_START);
-      } else {
-        opacity = 0;
-      }
-
-      svcOverlay.style.opacity = opacity;
-
-      if (opacity > 0) {
-        svcOverlay.classList.add('active');
-
-        if (!svcActive) {
-          svcActive = true;
-          // Slide in left header
-          svcLeft.classList.add('visible');
-          // Stagger-reveal cards
-          svcCards.forEach((card) => {
-            const delay = parseInt(card.getAttribute('data-svc-delay')) || 0;
-            setTimeout(() => card.classList.add('visible'), delay);
-          });
-          // Show marquee
-          setTimeout(() => svcMarquee.classList.add('visible'), 600);
-        }
-      } else {
-        svcOverlay.classList.remove('active');
-        if (svcActive) {
-          svcActive = false;
-          svcLeft.classList.remove('visible');
-          svcCards.forEach(card => card.classList.remove('visible'));
-          svcMarquee.classList.remove('visible');
-        }
-      }
     }
+
+    // Trigger glitch on all letters of a word
+    let glitchedWords = new Set();
+    function triggerGlitch(wordEl) {
+      const key = wordEl.getAttribute('data-word') + wordEl.parentElement.id;
+      if (glitchedWords.has(key)) return;
+      glitchedWords.add(key);
+      wordEl.querySelectorAll('span').forEach((s, i) => {
+        setTimeout(() => {
+          s.classList.add('tag-glitch');
+          s.addEventListener('animationend', () => s.classList.remove('tag-glitch'), { once: true });
+        }, i * 40);
+      });
+      playTick();
+    }
+
+    // Apply per-letter depth: each letter gets a different Z position for true 3D
+    function applyLetterDepth(wordEl, ease, depthRange, timeOffset) {
+      const letters = wordEl.querySelectorAll('span');
+      const now = performance.now() / 1000;
+      letters.forEach((s, i) => {
+        // Staggered Z depth: letters fan out in Z space
+        const centerI = (i - (letters.length - 1) / 2);
+        const zOff = centerI * depthRange * ease;
+        // Subtle floating: each letter bobs slightly at different phase
+        const float = Math.sin(now * 1.2 + i * 0.6 + timeOffset) * 2 * ease;
+        const floatZ = Math.cos(now * 0.8 + i * 0.9 + timeOffset) * 3 * ease;
+        s.style.transform = `translateZ(${zOff + floatZ}px) translateY(${float}px)`;
+      });
+    }
+
+    function updateTagline3D(frameIdx) {
+      // ── Outside range — hide everything ──
+      if (frameIdx < TAG3D_START || frameIdx > TAG3D_END) {
+        tagline3d.style.opacity = '0';
+        if (glitchedWords.size > 0) glitchedWords.clear();
+        return;
+      }
+
+      tagline3d.style.opacity = '1';
+
+      // ══════════════════════════════════════════════
+      //  PHASE 1: "CODING / THE / UNIVERSE" — LEFT
+      //  Frames 40 → 97, then fades out 97 → 112
+      // ══════════════════════════════════════════════
+      const p1Duration = TAG3D_PHASE2 - TAG3D_START; // 57 frames
+      const p1Progress = clamp01((frameIdx - TAG3D_START) / p1Duration);
+
+      // Fade out phase 1 after phase 2 starts
+      const p1FadeOut = frameIdx > TAG3D_PHASE2
+        ? clamp01(1 - (frameIdx - TAG3D_PHASE2) / 15)
+        : 1;
+      // Fade in at start
+      const p1FadeIn = clamp01((frameIdx - TAG3D_START) / 8);
+      tag3dPhase1.style.opacity = String(p1FadeIn * p1FadeOut);
+
+      // 3D zoom on the container: scale + tilt forward
+      const p1Zoom = 1 + p1Progress * 0.18;
+      const p1TiltX = 6 * (1 - easeOutCubic(clamp01(p1Progress / 0.5)));
+      tag3dPhase1.style.transform = `translateY(-50%) rotateX(${p1TiltX}deg) scale(${p1Zoom})`;
+
+      // Each word appears progressively
+      p1Words.forEach((word, i) => {
+        const wordStart = i / p1Words.length;
+        const wordDuration = 1 / p1Words.length;
+        const wordP = clamp01((p1Progress - wordStart) / wordDuration);
+        const ease = easeOutQuart(wordP);
+
+        // Dramatic 3D entrance
+        const rotY = 50 * (1 - ease);
+        const rotX = 12 * (1 - ease);
+        const transZ = -350 * (1 - ease);
+        const transX = -90 * (1 - ease);
+        const transY = 25 * (1 - ease);
+        const scale = 0.6 + 0.4 * ease;
+        const alpha = clamp01(wordP * 3);
+
+        word.style.opacity = String(alpha);
+        word.style.transform = `
+          translateX(${transX}px)
+          translateY(${transY}px)
+          translateZ(${transZ}px)
+          rotateY(${rotY}deg)
+          rotateX(${rotX}deg)
+          scale(${scale})`;
+
+        // Per-letter 3D depth: letters fan out in Z
+        if (ease > 0.3) {
+          applyLetterDepth(word, ease, 6, i * 2.5);
+        }
+
+        // Multi-layered glow for depth illusion
+        const glow = ease * 0.4;
+        word.style.textShadow = `
+          0 0 ${10 + ease * 50}px rgba(255,255,255,${glow}),
+          0 0 ${30 + ease * 60}px rgba(255,255,255,${glow * 0.3}),
+          0 0 ${80 + ease * 40}px rgba(100,200,255,${glow * 0.08}),
+          0 4px 25px rgba(0,0,0,0.7)`;
+
+        // Trigger glitch when word first becomes visible
+        if (alpha > 0.3) triggerGlitch(word);
+      });
+
+      // ══════════════════════════════════════════════
+      //  PHASE 2: "ONE / PIXEL / AT A / TIME" — RIGHT
+      //  Frames 97 → 175
+      // ══════════════════════════════════════════════
+      if (frameIdx < TAG3D_PHASE2) {
+        tag3dPhase2.style.opacity = '0';
+        return;
+      }
+
+      const p2Duration = TAG3D_END - TAG3D_PHASE2; // 78 frames
+      const p2Progress = clamp01((frameIdx - TAG3D_PHASE2) / p2Duration);
+
+      // Fade in / out
+      const p2FadeIn = clamp01((frameIdx - TAG3D_PHASE2) / 8);
+      const p2FadeOut = clamp01((TAG3D_END - frameIdx) / 12);
+      tag3dPhase2.style.opacity = String(p2FadeIn * p2FadeOut);
+
+      // 3D zoom + tilt
+      const p2Zoom = 1 + p2Progress * 0.15;
+      const p2TiltX = -5 * (1 - easeOutCubic(clamp01(p2Progress / 0.4)));
+      tag3dPhase2.style.transform = `translateY(-50%) rotateX(${p2TiltX}deg) scale(${p2Zoom})`;
+
+      // Each word appears progressively
+      p2Words.forEach((word, i) => {
+        const wordStart = i / p2Words.length;
+        const wordDuration = 1 / p2Words.length;
+        const wordP = clamp01((p2Progress - wordStart) / wordDuration);
+        const ease = easeOutQuart(wordP);
+
+        // Dramatic 3D entrance from opposite side
+        const rotY = -45 * (1 - ease);
+        const rotX = -10 * (1 - ease);
+        const transZ = -300 * (1 - ease);
+        const transX = 70 * (1 - ease);
+        const transY = -20 * (1 - ease);
+        const scale = 0.55 + 0.45 * ease;
+        const alpha = clamp01(wordP * 3);
+
+        word.style.opacity = String(alpha);
+        word.style.transform = `
+          translateX(${transX}px)
+          translateY(${transY}px)
+          translateZ(${transZ}px)
+          rotateY(${rotY}deg)
+          rotateX(${rotX}deg)
+          scale(${scale})`;
+
+        // Per-letter 3D depth
+        if (ease > 0.3) {
+          applyLetterDepth(word, ease, 5, i * 3.0 + 10);
+        }
+
+        // Glow
+        const glow = ease * 0.35;
+        word.style.textShadow = `
+          0 0 ${10 + ease * 45}px rgba(255,255,255,${glow}),
+          0 0 ${30 + ease * 55}px rgba(255,255,255,${glow * 0.25}),
+          0 0 ${70 + ease * 40}px rgba(100,200,255,${glow * 0.06}),
+          0 4px 22px rgba(0,0,0,0.7)`;
+
+        // Trigger glitch
+        if (alpha > 0.3) triggerGlitch(word);
+      });
+    }
+
+    /* Services 3D is handled by js/services3d.js */
 
     /* ═══════════════════════════════════════════════════════════
        MAIN LOOP
@@ -2222,7 +2129,8 @@
       if (useWebGL) drawGL(idx); else draw2D(idx);
       updateCursor();
       updateOverlay(idx);
-      updateServicesOverlay(idx);
+      updateTagline3D(idx);
+      if (window.updateServices3D) window.updateServices3D(idx);
       updateAmbientVolume(idx);
       requestAnimationFrame(animate);
     }
@@ -2246,9 +2154,9 @@
     ═══════════════════════════════════════════════════════════ */
     async function init() {
       buildBrandText();
+      buildTaglineLetters();
       buildMarquee();
-      buildSvcParticles();
-      buildStackedLogos();
+      // buildSvcParticles + buildStackedLogos removed — now using Three.js 3D services
       resize();
       if (!initWebGL()) { console.warn('WebGL unavailable — 2D fallback'); initFallback(); }
       await preloadImages();
@@ -2264,6 +2172,7 @@
     }
     init();
   </script>
+  <script src="js/services3d.js"></script>
 </body>
 
 </html>
