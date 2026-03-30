@@ -1,0 +1,6 @@
+# Static site only — assets must NOT be repo root (that includes .git and breaks the 25 MiB limit).
+name = "unvrs-labs-2"
+compatibility_date = "2025-09-27"
+
+[assets]
+directory = "dist"

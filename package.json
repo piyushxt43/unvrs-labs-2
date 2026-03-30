@@ -1,0 +1,11 @@
+{
+  "name": "unvrs-labs-2",
+  "private": true,
+  "description": "UNVRS Labs static site (Cloudflare Workers assets)",
+  "scripts": {
+    "build": "rm -rf dist && mkdir -p dist && cp index.html dist/ && cp -R js new-frames-webp dist/"
+  },
+  "devDependencies": {
+    "wrangler": "^4.78.0"
+  }
+}

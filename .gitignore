@@ -3,3 +3,8 @@ frames/
 
 # Conversion script (not needed in repo)
 convert_to_webp.py
+
+# Cloudflare / Wrangler
+dist/
+.wrangler/
+node_modules/
